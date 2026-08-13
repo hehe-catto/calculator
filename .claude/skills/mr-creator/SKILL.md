@@ -38,11 +38,14 @@ If instead you're already on a feature branch (not main/master), check whether i
 ```bash
 git fetch origin main --quiet
 git branch --merged origin/main
+git log origin/main..HEAD --oneline
 ```
 
-If `git fetch` fails (no network), skip this check and continue. If the current branch name doesn't appear in the merged list, continue normally — nothing to do here.
+**`git branch --merged` alone is not reliable — it misses squash merges.** GitHub's default merge strategy is squash-and-merge, which rewrites the commits into one new commit on `main` with no ancestor relationship to the original branch commits, so a squash-merged branch will *not* show up in `--merged`'s output even though its PR is closed and shipped. Treat the branch as merged if **either** signal fires: it appears in `--merged`, **or** `git log origin/main..HEAD` comes back empty (no commits unique to this branch — meaning everything on it is already on `main`, whether by real merge or because it was branched from an up-to-date `main` and nothing new is committed yet). If genuinely unsure (e.g. the branch has its own commits but you suspect its PR shipped via squash), check `gh pr view <branch> --json state,mergedAt` or ask the user rather than guessing.
 
-If the current branch **is** in the merged list, tell the user it's already merged into main, then do the following automatically:
+If `git fetch` fails (no network), skip this check and continue. If neither signal fires, continue normally — nothing to do here.
+
+If the current branch **is** merged (by either signal above) and has its own unique commits worth preserving, tell the user it's already merged into main, then do the following automatically:
 
 ```bash
 git stash push -u -m "auto-stash: changes from merged branch <branch>"
@@ -129,3 +132,5 @@ Report back the PR URL that `gh pr create` prints — that's the useful output, 
 - If the user asks for a draft PR, add `--draft` to the `gh pr create` call.
 - If they mention a linked issue ("closes #123"), include a `Closes #123` line in the body — GitHub will auto-link and auto-close it on merge.
 - If `gh pr create` fails because a PR already exists for the branch, that's `gh pr edit` territory — ask the user if they want to update the existing PR instead.
+- This skill's scope ends at opening the PR. "Merge it" / "merge the MR" is a distinct, higher-stakes action (it changes `main` for everyone) that this skill does not do implicitly — even right after successfully creating the PR. If the user says "create and merge" (or similar), treat it as two separate asks: create the PR here, then confirm separately before running `gh pr merge <number>` (and confirm the merge strategy — squash/merge/rebase — if the repo doesn't have an obvious default).
+- If you land on a branch expecting it to still need a PR and its work already appears on `main`, don't trust `git branch --merged` on its own — see the squash-merge caveat in Step 0.
