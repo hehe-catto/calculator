@@ -1,0 +1,17 @@
+services:
+  calculator-back:
+    build: ./calculator-back
+    environment:
+      PORT: "8080"
+    # No published host port: the API is reachable only through the frontend proxy.
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  calculator-front:
+    build: ./calculator-front
+    ports:
+      - "3000:3000"
+    depends_on:
+      - calculator-back
+    restart: unless-stopped

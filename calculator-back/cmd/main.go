@@ -6,19 +6,18 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	cfg := config{
-		addr: ":8080",
+		addr: normalizePort(os.Getenv("PORT")),
 	}
 	api := application{
 		config: cfg,
 	}
-	h := api.mount()
-	// logger
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
 
-	if err := api.run(h); err != nil {
-		slog.Error("Server failed to start", "error", err)
+	if err := api.run(api.mount()); err != nil {
+		slog.Error("server failed to start", "error", err)
 		os.Exit(1)
 	}
 }
