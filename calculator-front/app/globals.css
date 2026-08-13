@@ -3,3 +3,43 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.calculator {
+  max-width: 320px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #e7e3dc;
+}
+
+.display {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #c7c4a9;
+  text-align: right;
+}
+
+.result {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.key-wide {
+  grid-column: span 2;
+}
+
+button {
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  background: #f2ede3;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
