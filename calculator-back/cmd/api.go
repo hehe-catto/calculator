@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -10,19 +11,18 @@ import (
 	"github.com/hehe-catto/calculator/calculator-back/internal/operations"
 )
 
-// global struct -> my api will have methods that are going to run and mounts my api (create handlers, signatures)
 type application struct {
 	config config
 }
 
-// mount
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.ClientIPFromRemoteAddr)
+	// Behind nginx, RemoteAddr is always the proxy. X-Real-IP is set unconditionally
+	// by the proxy, so it cannot be spoofed by the client.
+	r.Use(middleware.ClientIPFromHeader("X-Real-IP"))
 
-	// middleware
-	r.Use(middleware.RequestID) // important for rate limit
-	r.Use(middleware.Logger)    // important for rate limit, analytics ans tracing
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
@@ -30,10 +30,13 @@ func (app *application) mount() http.Handler {
 	calcHandler := operations.NewHandler(calcService)
 
 	r.Route("/v1/operations", func(sub chi.Router) {
-		sub.Get("/sum", calcHandler.SumOperation)
-		sub.Get("/sub", calcHandler.SubOperation)
-		sub.Get("/mul", calcHandler.MulOperation)
-		sub.Get("/div", calcHandler.DivOperation)
+		sub.Get("/sum", calcHandler.SumOperation())
+		sub.Get("/sub", calcHandler.SubOperation())
+		sub.Get("/mul", calcHandler.MulOperation())
+		sub.Get("/div", calcHandler.DivOperation())
+		sub.Get("/exp", calcHandler.ExpOperation())
+		sub.Get("/per", calcHandler.PerOperation())
+		sub.Get("/sqrt", calcHandler.SqrtOperation())
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +46,6 @@ func (app *application) mount() http.Handler {
 	return r
 }
 
-// run
 func (app *application) run(h http.Handler) error {
 	srv := &http.Server{
 		Addr:         app.config.addr,
@@ -53,10 +55,22 @@ func (app *application) run(h http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Printf("Server has started at addr %s", app.config.addr)
+	slog.Info("server has started", "addr", app.config.addr)
 	return srv.ListenAndServe()
 }
 
 type config struct {
 	addr string
+}
+
+// normalizePort accepts either "8080" or ":8080" and always returns ":8080",
+// since platforms inject PORT without the leading colon ListenAndServe needs.
+func normalizePort(p string) string {
+	if p == "" {
+		return ":8080"
+	}
+	if !strings.HasPrefix(p, ":") {
+		return ":" + p
+	}
+	return p
 }

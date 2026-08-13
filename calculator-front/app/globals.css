@@ -22,8 +22,17 @@ body {
 .result {
   font-size: 2rem;
   font-weight: bold;
+  overflow-wrap: anywhere;
 }
 
+.result.is-error {
+  font-size: 1rem;
+  color: #8a2b2b;
+}
+
+.result.is-loading {
+  opacity: 0.6;
+}
 
 .keys {
   display: grid;
@@ -32,14 +41,20 @@ body {
 }
 
 .key-wide {
-  grid-column: span 2;
+  grid-column: span 4;
 }
 
-button {
+button,
+.key {
   padding: 16px;
   border: none;
   border-radius: 8px;
   background: #f2ede3;
   font-size: 1.25rem;
   cursor: pointer;
+}
+
+.key:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

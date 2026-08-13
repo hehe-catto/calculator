@@ -2,113 +2,49 @@ package operations
 
 import (
 	"context"
-	"net/http"
-	"strconv"
-
-	"github.com/hehe-catto/calculator/calculator-back/internal/operations/json"
+	"errors"
+	"math"
 )
 
-type Service interface {
-	Sum(ctx context.Context, a, b float64) (float64, error)
-	Sub(ctx context.Context, a, b float64) (float64, error)
-	Mul(ctx context.Context, a, b float64) (float64, error)
-	Div(ctx context.Context, a, b float64) (float64, error)
+type CalcService struct{}
+
+func NewService() *CalcService {
+	return &CalcService{}
 }
 
-type handler struct {
-	service Service
+func (s *CalcService) Sum(ctx context.Context, a, b float64) (float64, error) {
+	return a + b, nil
 }
 
-func NewHandler(service Service) *handler {
-	return &handler{
-		service: service,
-	}
+func (s *CalcService) Sub(ctx context.Context, a, b float64) (float64, error) {
+	return a - b, nil
 }
 
-type CalcResponse struct {
-	Result float64 `json:"result"`
+func (s *CalcService) Mul(ctx context.Context, a, b float64) (float64, error) {
+	return a * b, nil
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
+func (s *CalcService) Div(ctx context.Context, a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("cannot divide by zero")
+	}
+	return a / b, nil
 }
 
-func (h *handler) SumOperation(w http.ResponseWriter, r *http.Request) {
-	a, b, ok := h.parseInputs(w, r)
-	if !ok {
-		return
+func (s *CalcService) Sqrt(ctx context.Context, a float64) (float64, error) {
+	if a < 0 {
+		return 0, errors.New("cannot calculate square root of a negative number")
 	}
-
-	result, err := h.service.Sum(r.Context(), a, b)
-	if err != nil {
-		json.Write(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
-
-	json.Write(w, http.StatusOK, CalcResponse{Result: result})
+	return math.Sqrt(a), nil
 }
 
-func (h *handler) SubOperation(w http.ResponseWriter, r *http.Request) {
-	a, b, ok := h.parseInputs(w, r)
-	if !ok {
-		return
-	}
-
-	result, err := h.service.Sub(r.Context(), a, b)
-	if err != nil {
-		json.Write(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
-
-	json.Write(w, http.StatusOK, CalcResponse{Result: result})
+func (s *CalcService) Exp(ctx context.Context, a, b float64) (float64, error) {
+	return math.Pow(a, b), nil
 }
 
-func (h *handler) MulOperation(w http.ResponseWriter, r *http.Request) {
-	a, b, ok := h.parseInputs(w, r)
-	if !ok {
-		return
+func (s *CalcService) Per(ctx context.Context, a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("cannot calculate percentage of zero")
 	}
-
-	result, err := h.service.Mul(r.Context(), a, b)
-	if err != nil {
-		json.Write(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
-
-	json.Write(w, http.StatusOK, CalcResponse{Result: result})
-}
-
-func (h *handler) DivOperation(w http.ResponseWriter, r *http.Request) {
-	a, b, ok := h.parseInputs(w, r)
-	if !ok {
-		return
-	}
-
-	result, err := h.service.Div(r.Context(), a, b)
-	if err != nil {
-		json.Write(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-		return
-	}
-
-	json.Write(w, http.StatusOK, CalcResponse{Result: result})
-}
-
-func (h *handler) parseInputs(w http.ResponseWriter, r *http.Request) (float64, float64, bool) {
-	aStr := r.URL.Query().Get("a")
-	bStr := r.URL.Query().Get("b")
-
-	if aStr == "" || bStr == "" {
-		json.Write(w, http.StatusBadRequest, ErrorResponse{Error: "missing query parameters 'a' and 'b'"})
-		return 0, 0, false
-	}
-
-	a, errA := strconv.ParseFloat(aStr, 64)
-	b, errB := strconv.ParseFloat(bStr, 64)
-
-	if errA != nil || errB != nil {
-		json.Write(w, http.StatusBadRequest, ErrorResponse{Error: "invalid numeric values for 'a' or 'b'"})
-		return 0, 0, false
-	}
-
-	return a, b, true
+	return a / b * 100, nil
 }

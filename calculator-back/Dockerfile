@@ -1,11 +1,21 @@
-FROM golang:1.26
+ARG GO_VERSION=1.26
 
-WORKDIR /usr/src/app
+FROM golang:${GO_VERSION} AS builder
+
+WORKDIR /src
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -v -o /usr/local/bin/app ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/app ./cmd
 
-CMD ["app"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS runner
+
+COPY --from=builder /out/app /app
+
+EXPOSE 8080
+USER nonroot:nonroot
+
+ENTRYPOINT ["/app"]
